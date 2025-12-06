@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/sofia-movies/static/css/main.1fb3f284.css",
+    "main.js": "/sofia-movies/static/js/main.a975bcfb.js",
+    "index.html": "/sofia-movies/index.html",
+    "main.1fb3f284.css.map": "/sofia-movies/static/css/main.1fb3f284.css.map",
+    "main.a975bcfb.js.map": "/sofia-movies/static/js/main.a975bcfb.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.1fb3f284.css",
+    "static/js/main.a975bcfb.js"
+  ]
+}
