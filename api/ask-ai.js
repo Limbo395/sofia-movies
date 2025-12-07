@@ -1,4 +1,3 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const path = require("path");
 const fs = require("fs");
 
@@ -8,13 +7,18 @@ function loadData() {
     const moviesPath = path.join(process.cwd(), "src/data/movies.json");
     const filmsPath = path.join(process.cwd(), "src/data/films.json");
     
+    console.log("Loading movies from:", moviesPath);
+    console.log("Loading films from:", filmsPath);
+    
     const movies = JSON.parse(fs.readFileSync(moviesPath, "utf8"));
     const films = JSON.parse(fs.readFileSync(filmsPath, "utf8"));
     
+    console.log("Loaded", movies.length, "movies and", films.length, "films");
+    
     return [...movies, ...films];
   } catch (error) {
-    console.error("Error loading data:", error);
-    return [];
+    console.error("Error loading data:", error.message);
+    throw new Error("Не вдалося завантажити дані: " + error.message);
   }
 }
 
@@ -77,44 +81,55 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "Питання занадто довге (макс. 500 символів)" });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   
   if (!apiKey) {
-    console.error("GEMINI_API_KEY not configured");
+    console.error("OPENAI_API_KEY not configured");
     return res.status(500).json({ error: "API не налаштовано" });
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash",
-      generationConfig: {
-        maxOutputTokens: 256,
-        temperature: 0.7,
-      }
-    });
-
     const allContent = loadData();
     const movieContext = buildMovieContext(allContent);
     const systemPrompt = getSystemPrompt(movieContext);
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: systemPrompt + "\n\nПитання користувача: " + question.trim() }
-          ]
-        }
-      ]
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-5-nano",
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt
+          },
+          {
+            role: "user",
+            content: question.trim()
+          }
+        ],
+        max_tokens: 256,
+        temperature: 0.7
+      })
     });
 
-    const response = result.response;
-    const text = response.text();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    }
 
-    return res.status(200).json({ answer: text });
+    const data = await response.json();
+    const answer = data.choices[0]?.message?.content || "Не вдалося отримати відповідь";
+
+    return res.status(200).json({ answer });
   } catch (error) {
-    console.error("Gemini API error:", error.message || error);
-    return res.status(500).json({ error: "Не вдалося отримати відповідь" });
+    console.error("OpenAI API error:", error.message || error);
+    return res.status(500).json({ 
+      error: "Не вдалося отримати відповідь",
+      details: error.message || String(error)
+    });
   }
 };
