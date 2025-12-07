@@ -25,14 +25,15 @@ function loadData() {
 // Формування контексту про контент сайту
 function buildMovieContext(allContent) {
   const lines = allContent.map((item) => {
-    const type = item.type || "мультфільм";
-    const director = item.director || "невідомо";
-    const year = item.year || "н/д";
     const title = item.title;
     const titleOriginal = item.titleOriginal || "";
     const description = item.description || "";
     
-    return `• ${title} (${titleOriginal}) — ${type}, ${year}, реж. ${director}. ${description.slice(0, 120)}${description.length > 120 ? "..." : ""}`;
+    if (titleOriginal) {
+      return `• ${title} (${titleOriginal}): ${description}`;
+    } else {
+      return `• ${title}: ${description}`;
+    }
   });
   
   return lines.join("\n");
