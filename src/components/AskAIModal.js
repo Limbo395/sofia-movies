@@ -90,7 +90,7 @@ function AskAIModal({ onClose }) {
               type="text"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Наприклад: Який мультфільм про ведмедя?"
+              placeholder="Який мультфільм про чорного кота?"
               maxLength={500}
               disabled={isLoading}
               className="ask-ai-input"
