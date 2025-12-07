@@ -1,13 +1,25 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const path = require("path");
+const fs = require("fs");
 
-// Дані про фільми та мультфільми
-const movies = require("../src/data/movies.json");
-const films = require("../src/data/films.json");
+// Завантаження даних про фільми
+function loadData() {
+  try {
+    const moviesPath = path.join(process.cwd(), "src/data/movies.json");
+    const filmsPath = path.join(process.cwd(), "src/data/films.json");
+    
+    const movies = JSON.parse(fs.readFileSync(moviesPath, "utf8"));
+    const films = JSON.parse(fs.readFileSync(filmsPath, "utf8"));
+    
+    return [...movies, ...films];
+  } catch (error) {
+    console.error("Error loading data:", error);
+    return [];
+  }
+}
 
 // Формування контексту про контент сайту
-function buildMovieContext() {
-  const allContent = [...movies, ...films];
-  
+function buildMovieContext(allContent) {
   const lines = allContent.map((item) => {
     const type = item.type || "мультфільм";
     const director = item.director || "невідомо";
@@ -82,7 +94,8 @@ module.exports = async function handler(req, res) {
       }
     });
 
-    const movieContext = buildMovieContext();
+    const allContent = loadData();
+    const movieContext = buildMovieContext(allContent);
     const systemPrompt = getSystemPrompt(movieContext);
 
     const result = await model.generateContent({
@@ -101,8 +114,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({ answer: text });
   } catch (error) {
-    console.error("Gemini API error:", error);
+    console.error("Gemini API error:", error.message || error);
     return res.status(500).json({ error: "Не вдалося отримати відповідь" });
   }
 };
-

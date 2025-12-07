@@ -4,6 +4,7 @@ import MovieList from './components/MovieList';
 import MovieModal from './components/MovieModal';
 import SeriesModal from './components/SeriesModal';
 import AskAIModal from './components/AskAIModal';
+import BackToTop from './components/BackToTop';
 
 function App() {
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -82,6 +83,8 @@ function App() {
       {showAskAI && (
         <AskAIModal onClose={() => setShowAskAI(false)} />
       )}
+
+      <BackToTop />
     </div>
   );
 }

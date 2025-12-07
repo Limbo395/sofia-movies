@@ -28,22 +28,14 @@ body {
   min-height: 100dvh;
 }
 
-/* Scrollbar стилі для webkit */
+/* Приховати скролбар */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 107, 157, 0.5);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 107, 157, 0.7);
+  display: none; /* Chrome/Safari/Opera */
 }
 
 /* Відключити виділення на мобільних */
