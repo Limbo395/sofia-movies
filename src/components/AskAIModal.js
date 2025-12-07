@@ -5,6 +5,7 @@ function AskAIModal({ onClose }) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef(null);
 
@@ -30,6 +31,7 @@ function AskAIModal({ onClose }) {
     setAnswer('');
 
     try {
+      setIsStreaming(true);
       const response = await fetch('/api/ask-ai', {
         method: 'POST',
         headers: {
@@ -38,27 +40,35 @@ function AskAIModal({ onClose }) {
         body: JSON.stringify({ question: question.trim() }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
         throw new Error(data.error || data.details || 'Помилка запиту');
       }
 
-      // Перевірка, чи відповідь не порожня і не містить текст про помилку
-      if (!data.answer || data.answer.trim().length === 0) {
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Стрімінг недоступний');
+      }
+
+      const decoder = new TextDecoder();
+      let result = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        result += chunk;
+        setAnswer((prev) => (prev || '') + chunk);
+      }
+
+      if (!result.trim()) {
         throw new Error('Модель повернула порожню відповідь');
       }
-
-      if (data.answer.toLowerCase().includes('не вдалося') || 
-          data.answer.toLowerCase().includes('помилка')) {
-        throw new Error(data.answer);
-      }
-
-      setAnswer(data.answer);
     } catch (err) {
       setError(err.message || 'Щось пішло не так');
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
 

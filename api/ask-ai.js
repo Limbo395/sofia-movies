@@ -121,7 +121,8 @@ module.exports = async function handler(req, res) {
         }
       ],
       max_completion_tokens: 512,
-      reasoning_effort: "low" // Мінімізуємо reasoning, щоб більше токенів йшло на відповідь
+      reasoning_effort: "low",
+      stream: true
     };
     
     console.log("Sending request to OpenAI:", {
@@ -145,10 +146,10 @@ module.exports = async function handler(req, res) {
       console.error("Fetch error:", fetchError);
       throw new Error("Помилка з'єднання з API: " + fetchError.message);
     }
-    
+
     console.log("Response status:", response.status, response.statusText);
 
-    if (!response.ok) {
+    if (!response.ok || !response.body) {
       const errorText = await response.text();
       let errorData;
       try {
@@ -160,69 +161,44 @@ module.exports = async function handler(req, res) {
       throw new Error(errorData.error?.message || `HTTP ${response.status}: ${errorText}`);
     }
 
-    let data;
-    try {
-      const responseText = await response.text();
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error("Failed to parse response:", parseError);
-      throw new Error("Помилка парсингу відповіді від API");
-    }
-    
-    // Логування для діагностики
-    console.log("OpenAI response structure:", {
-      hasChoices: !!data.choices,
-      choicesLength: data.choices?.length,
-      finishReason: data.choices?.[0]?.finish_reason,
-      firstChoice: data.choices?.[0] ? {
-        hasMessage: !!data.choices[0].message,
-        messageKeys: data.choices[0].message ? Object.keys(data.choices[0].message) : [],
-        hasContent: !!data.choices[0].message?.content,
-        contentLength: data.choices[0].message?.content?.length,
-        contentPreview: data.choices[0].message?.content?.substring(0, 100) || "empty",
-        fullMessage: JSON.stringify(data.choices[0].message)
-      } : null,
-      usage: data.usage
-    });
-    
-    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
-      console.error("No choices in response:", data);
-      return res.status(500).json({ 
-        error: "Не вдалося отримати відповідь",
-        details: "API повернув неочікувану структуру відповіді"
-      });
-    }
-    
-    const finishReason = data.choices[0]?.finish_reason;
-    let answer = data.choices[0]?.message?.content?.trim();
-    
-    if (!answer || answer.length === 0) {
-      console.error("Empty answer in response. Full message:", JSON.stringify(data.choices[0]?.message, null, 2));
-      
-      // Якщо finish_reason = 'length', це означає, що відповідь обрізана
-      if (finishReason === 'length') {
-        return res.status(500).json({ 
-          error: "Відповідь занадто довга і була обрізана",
-          details: "Спробуй сформулювати питання коротше"
-        });
+    // Стрімимо відповідь далі клієнту
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Transfer-Encoding", "chunked");
+
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    for await (const chunk of response.body) {
+      const text = decoder.decode(chunk);
+      buffer += text;
+
+      // OpenAI stream надсилає блоки типу "data: {json}\n\n"
+      const parts = buffer.split("\n\n");
+      // Останню частину залишаємо в буфері, якщо вона неповна
+      buffer = parts.pop() || "";
+
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line.startsWith("data:")) continue;
+        const payload = line.replace("data:", "").trim();
+        if (payload === "[DONE]") {
+          res.end();
+          return;
+        }
+        try {
+          const parsed = JSON.parse(payload);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            res.write(content);
+          }
+        } catch (err) {
+          console.error("Stream parse error:", err);
+        }
       }
-      
-      return res.status(500).json({ 
-        error: "Не вдалося отримати відповідь",
-        details: "Модель повернула порожню відповідь. Finish reason: " + finishReason
-      });
-    }
-    
-    // Перевірка на занадто короткі або некорисні відповіді
-    if (answer.length < 3) {
-      console.error("Answer too short:", answer);
-      return res.status(500).json({ 
-        error: "Не вдалося отримати відповідь",
-        details: "Модель повернула занадто коротку відповідь"
-      });
     }
 
-    return res.status(200).json({ answer });
+    res.end();
+    return;
   } catch (error) {
     console.error("OpenAI API error:", error.message || error);
     return res.status(500).json({ 

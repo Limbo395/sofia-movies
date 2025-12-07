@@ -23,34 +23,34 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(244, 114, 182, 0.2) 100%);
-  border: 1px solid rgba(167, 139, 250, 0.3);
-  border-radius: 20px;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.85rem;
-  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  color: #0f1115;
+  font-size: 0.9rem;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
 .ask-ai-btn:hover {
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.35) 0%, rgba(244, 114, 182, 0.35) 100%);
-  border-color: rgba(167, 139, 250, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(167, 139, 250, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
 }
 
 .ask-ai-btn:active {
   transform: translateY(0);
 }
 
-.ask-ai-btn-icon {
-  font-size: 1rem;
+.ask-ai-btn-text {
+  letter-spacing: 0.1px;
 }
 
-.ask-ai-btn-text {
-  letter-spacing: 0.3px;
+.ask-ai-btn-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 @media (max-width: 380px) {
