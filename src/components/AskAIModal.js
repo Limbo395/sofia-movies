@@ -41,7 +41,17 @@ function AskAIModal({ onClose }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Помилка запиту');
+        throw new Error(data.error || data.details || 'Помилка запиту');
+      }
+
+      // Перевірка, чи відповідь не порожня і не містить текст про помилку
+      if (!data.answer || data.answer.trim().length === 0) {
+        throw new Error('Модель повернула порожню відповідь');
+      }
+
+      if (data.answer.toLowerCase().includes('не вдалося') || 
+          data.answer.toLowerCase().includes('помилка')) {
+        throw new Error(data.answer);
       }
 
       setAnswer(data.answer);

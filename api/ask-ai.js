@@ -27,7 +27,8 @@ function buildMovieContext(allContent) {
   const lines = allContent.map((item) => {
     const title = item.title;
     const titleOriginal = item.titleOriginal || "";
-    const description = item.description || "";
+    // Обмежуємо опис до 200 символів, щоб не перевантажувати контекст
+    const description = (item.description || "").slice(0, 200);
     
     if (titleOriginal) {
       return `• ${title} (${titleOriginal}): ${description}`;
@@ -93,36 +94,92 @@ module.exports = async function handler(req, res) {
     const allContent = loadData();
     const movieContext = buildMovieContext(allContent);
     const systemPrompt = getSystemPrompt(movieContext);
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-5-nano",
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          },
-          {
-            role: "user",
-            content: question.trim()
-          }
-        ],
-        max_completion_tokens: 256
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    
+    // Логування розміру контексту
+    const contextSize = systemPrompt.length;
+    console.log("Context size:", contextSize, "characters");
+    
+    if (contextSize > 100000) {
+      console.warn("Context is very large, might cause issues");
     }
 
-    const data = await response.json();
-    const answer = data.choices[0]?.message?.content || "Не вдалося отримати відповідь";
+    let response;
+    try {
+      response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-5-nano",
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: question.trim()
+            }
+          ],
+          max_completion_tokens: 256
+        })
+      });
+    } catch (fetchError) {
+      console.error("Fetch error:", fetchError);
+      throw new Error("Помилка з'єднання з API: " + fetchError.message);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText };
+      }
+      console.error("OpenAI API error response:", errorData);
+      throw new Error(errorData.error?.message || `HTTP ${response.status}: ${errorText}`);
+    }
+
+    let data;
+    try {
+      const responseText = await response.text();
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Failed to parse response:", parseError);
+      throw new Error("Помилка парсингу відповіді від API");
+    }
+    
+    // Логування для діагностики (тільки структура, без повного контенту)
+    console.log("OpenAI response:", {
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length,
+      firstChoice: data.choices?.[0] ? {
+        hasMessage: !!data.choices[0].message,
+        hasContent: !!data.choices[0].message?.content,
+        contentLength: data.choices[0].message?.content?.length
+      } : null
+    });
+    
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      console.error("No choices in response:", data);
+      return res.status(500).json({ 
+        error: "Не вдалося отримати відповідь",
+        details: "API повернув неочікувану структуру відповіді"
+      });
+    }
+    
+    const answer = data.choices[0]?.message?.content?.trim();
+    
+    if (!answer) {
+      console.error("Empty answer in response:", data);
+      return res.status(500).json({ 
+        error: "Не вдалося отримати відповідь",
+        details: "Модель повернула порожню відповідь"
+      });
+    }
 
     return res.status(200).json({ answer });
   } catch (error) {
