@@ -11,6 +11,56 @@
   text-align: center;
   padding: 40px 0 24px;
   animation: fadeInDown 0.6s ease-out;
+  position: relative;
+}
+
+/* Ask AI Button */
+.ask-ai-btn {
+  position: absolute;
+  top: 16px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(244, 114, 182, 0.2) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.ask-ai-btn:hover {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.35) 0%, rgba(244, 114, 182, 0.35) 100%);
+  border-color: rgba(167, 139, 250, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(167, 139, 250, 0.25);
+}
+
+.ask-ai-btn:active {
+  transform: translateY(0);
+}
+
+.ask-ai-btn-icon {
+  font-size: 1rem;
+}
+
+.ask-ai-btn-text {
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 380px) {
+  .ask-ai-btn-text {
+    display: none;
+  }
+  
+  .ask-ai-btn {
+    padding: 8px 10px;
+  }
 }
 
 .header-decoration {

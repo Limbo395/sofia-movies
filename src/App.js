@@ -3,10 +3,12 @@ import './App.css';
 import MovieList from './components/MovieList';
 import MovieModal from './components/MovieModal';
 import SeriesModal from './components/SeriesModal';
+import AskAIModal from './components/AskAIModal';
 
 function App() {
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [selectedSeries, setSelectedSeries] = useState(null);
+  const [showAskAI, setShowAskAI] = useState(false);
 
   const handleOpenMovie = (movie) => {
     setSelectedSeries(null);
@@ -34,6 +36,14 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
+        <button 
+          className="ask-ai-btn"
+          onClick={() => setShowAskAI(true)}
+          aria-label="Запитати AI"
+        >
+          <span className="ask-ai-btn-icon">🤖</span>
+          <span className="ask-ai-btn-text">Ask AI</span>
+        </button>
         <div className="header-decoration">✨</div>
         <h1 className="app-title">
           Привіт, <span className="name-highlight">Соня</span>!
@@ -67,6 +77,10 @@ function App() {
           onClose={handleCloseSeries}
           onSelectMovie={handleSelectFromSeries}
         />
+      )}
+
+      {showAskAI && (
+        <AskAIModal onClose={() => setShowAskAI(false)} />
       )}
     </div>
   );
