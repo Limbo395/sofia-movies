@@ -118,7 +118,8 @@ module.exports = async function handler(req, res) {
           content: question.trim()
         }
       ],
-      max_completion_tokens: 256
+      max_completion_tokens: 512,
+      reasoning_effort: "low" // Мінімізуємо reasoning, щоб більше токенів йшло на відповідь
     };
     
     console.log("Sending request to OpenAI:", {
@@ -170,13 +171,16 @@ module.exports = async function handler(req, res) {
     console.log("OpenAI response structure:", {
       hasChoices: !!data.choices,
       choicesLength: data.choices?.length,
+      finishReason: data.choices?.[0]?.finish_reason,
       firstChoice: data.choices?.[0] ? {
         hasMessage: !!data.choices[0].message,
+        messageKeys: data.choices[0].message ? Object.keys(data.choices[0].message) : [],
         hasContent: !!data.choices[0].message?.content,
         contentLength: data.choices[0].message?.content?.length,
-        contentPreview: data.choices[0].message?.content?.substring(0, 50) || "empty"
+        contentPreview: data.choices[0].message?.content?.substring(0, 100) || "empty",
+        fullMessage: JSON.stringify(data.choices[0].message)
       } : null,
-      fullResponseKeys: Object.keys(data)
+      usage: data.usage
     });
     
     if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
@@ -187,13 +191,23 @@ module.exports = async function handler(req, res) {
       });
     }
     
+    const finishReason = data.choices[0]?.finish_reason;
     let answer = data.choices[0]?.message?.content?.trim();
     
     if (!answer || answer.length === 0) {
-      console.error("Empty answer in response:", data);
+      console.error("Empty answer in response. Full message:", JSON.stringify(data.choices[0]?.message, null, 2));
+      
+      // Якщо finish_reason = 'length', це означає, що відповідь обрізана
+      if (finishReason === 'length') {
+        return res.status(500).json({ 
+          error: "Відповідь занадто довга і була обрізана",
+          details: "Спробуй сформулювати питання коротше"
+        });
+      }
+      
       return res.status(500).json({ 
         error: "Не вдалося отримати відповідь",
-        details: "Модель повернула порожню відповідь"
+        details: "Модель повернула порожню відповідь. Finish reason: " + finishReason
       });
     }
     
