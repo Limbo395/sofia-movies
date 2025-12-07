@@ -118,7 +118,7 @@ module.exports = async function handler(req, res) {
     }
 
     const requestBody = {
-      model: "gpt-5-nano",
+      model: "gpt-5-mini",
       messages: [
         {
           role: "system",
