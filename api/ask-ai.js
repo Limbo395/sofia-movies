@@ -1,6 +1,11 @@
 const path = require("path");
 const fs = require("fs");
 
+// Перевірка доступності fetch
+if (typeof fetch === 'undefined') {
+  console.error("Fetch is not available, this might be an issue");
+}
+
 // Завантаження даних про фільми
 function loadData() {
   try {
@@ -101,6 +106,28 @@ module.exports = async function handler(req, res) {
       console.warn("Context is very large, might cause issues");
     }
 
+    const requestBody = {
+      model: "gpt-5-nano",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: question.trim()
+        }
+      ],
+      max_completion_tokens: 256
+    };
+    
+    console.log("Sending request to OpenAI:", {
+      model: requestBody.model,
+      systemPromptLength: systemPrompt.length,
+      questionLength: question.trim().length,
+      messagesCount: requestBody.messages.length
+    });
+    
     let response;
     try {
       response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -109,25 +136,14 @@ module.exports = async function handler(req, res) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model: "gpt-5-nano",
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt
-            },
-            {
-              role: "user",
-              content: question.trim()
-            }
-          ],
-          max_completion_tokens: 256
-        })
+        body: JSON.stringify(requestBody)
       });
     } catch (fetchError) {
       console.error("Fetch error:", fetchError);
       throw new Error("Помилка з'єднання з API: " + fetchError.message);
     }
+    
+    console.log("Response status:", response.status, response.statusText);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -150,15 +166,17 @@ module.exports = async function handler(req, res) {
       throw new Error("Помилка парсингу відповіді від API");
     }
     
-    // Логування для діагностики (тільки структура, без повного контенту)
-    console.log("OpenAI response:", {
+    // Логування для діагностики
+    console.log("OpenAI response structure:", {
       hasChoices: !!data.choices,
       choicesLength: data.choices?.length,
       firstChoice: data.choices?.[0] ? {
         hasMessage: !!data.choices[0].message,
         hasContent: !!data.choices[0].message?.content,
-        contentLength: data.choices[0].message?.content?.length
-      } : null
+        contentLength: data.choices[0].message?.content?.length,
+        contentPreview: data.choices[0].message?.content?.substring(0, 50) || "empty"
+      } : null,
+      fullResponseKeys: Object.keys(data)
     });
     
     if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
