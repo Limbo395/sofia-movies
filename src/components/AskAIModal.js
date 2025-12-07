@@ -115,7 +115,7 @@ function AskAIModal({ onClose }) {
               type="text"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Який мультфільм про чорного кота?"
+              placeholder="Рудоволоса дівчинка з луком?"
               maxLength={500}
               disabled={isLoading}
               className="ask-ai-input"
@@ -152,20 +152,9 @@ function AskAIModal({ onClose }) {
         )}
 
         {answer && (
-          <div className="ask-ai-chat">
-            <div className="ask-ai-bubble user">
-              <div className="bubble-label">Ти</div>
-              <div className="bubble-text">{question}</div>
-            </div>
-            <div className="ask-ai-bubble ai">
-              <div className="bubble-avatar">
-                <img src="/chat-gpt.png" alt="GPT icon" />
-              </div>
-              <div>
-                <div className="bubble-label">GPT</div>
-                <div className="bubble-text">{answer}</div>
-              </div>
-            </div>
+          <div className="ask-ai-answer">
+            <div className="ask-ai-answer-label">GPT</div>
+            <div className="ask-ai-answer-text">{answer}</div>
           </div>
         )}
       </div>
